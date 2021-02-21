@@ -7,6 +7,8 @@ const getSocketFromUserID = (userid) => userToSocketMap[userid];
 const getUserFromSocketID = (socketid) => socketToUserMap[socketid];
 const getSocketFromSocketID = (socketid) => io.sockets.connected[socketid];
 
+const Board = require('./models/board')
+
 const addUser = (user, socket) => {
   const oldSocket = userToSocketMap[user._id];
   if (oldSocket && oldSocket.id !== socket.id) {
@@ -31,11 +33,21 @@ module.exports = {
 
     io.on("connection", (socket) => {
       console.log(`socket has connected ${socket.id}`);
+
+        socket.on('color-change', async () => {
+            console.log('got')
+            io.sockets.emit('colors', await Board.find({ }).populate('author'))
+        })
+
+
       socket.on("disconnect", (reason) => {
         const user = getUserFromSocketID(socket.id);
         removeUser(user, socket);
       });
+    
+    
     });
+
   },
 
   addUser: addUser,

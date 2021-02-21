@@ -11,6 +11,7 @@ const express = require("express");
 
 // import models so we can interact with the database
 const User = require("./models/user");
+const Board = require('./models/board');
 
 // import authentication library
 const auth = require("./auth");
@@ -20,6 +21,9 @@ const router = express.Router();
 
 //initialize socket
 const socketManager = require("./server-socket");
+
+// mongoose
+const mongoose = require('mongoose')
 
 router.post("/login", auth.login);
 router.post("/logout", auth.logout);
@@ -41,6 +45,40 @@ router.post("/initsocket", (req, res) => {
 // |------------------------------|
 // | write your API methods below!|
 // |------------------------------|
+
+router.get('/boards', async (req, res) => {
+	res.send(await Board.find({}).populate('author'))
+})
+
+router.post('/boards', async (req, res) => {
+    if (!req.user) return res.sendStatus(401)
+    console.log('req.user', req.user)
+
+    const doesUserHaveBoard = await Board.exists({ author: mongoose.Types.ObjectId(req.user._id) })
+    if (doesUserHaveBoard) {
+        return res.sendStatus(409)
+    }
+
+    const board = await Board.create({
+        author: mongoose.Types.ObjectId(req.user._id),
+        colors: new Array(36).fill('#dbdbdb')
+    })
+
+    return res.send(await Board.find({}).populate('author'))
+})
+
+router.post('/boards/color', async (req, res) => {
+    if (!req.user) return res.sendStatus(401)
+    console.log('req.user', req.user)
+
+    const usersBoard = await Board.findOne({ author: mongoose.Types.ObjectId(req.user._id) }).lean()
+    let updatedColors = usersBoard.colors
+    updatedColors[req.body.position] = req.body.newColor
+    await Board.findOneAndUpdate({ author: mongoose.Types.ObjectId(req.user._id) }, { colors: updatedColors })
+    console.log(`[${req.body.position}] = ${req.body.newColor}`)
+
+    return res.send({ success: true })
+})
 
 // anything else falls to this "not found" case
 router.all("*", (req, res) => {

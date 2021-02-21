@@ -1,3 +1,4 @@
+require('dotenv').config()
 /*
 |--------------------------------------------------------------------------
 | server.js -- The core of your server
@@ -33,16 +34,14 @@ const socketManager = require("./server-socket");
 
 // Server configuration below
 // TODO change connection URL after setting up your team database
-const mongoConnectionURL = "FILL ME IN";
-// TODO change database name to the name you chose
-const databaseName = "FILL ME IN";
+const mongoConnectionURL = process.env.MONGODB_CONNECTION_URL
 
+console.log('mongoConnectionURL', mongoConnectionURL)
 // connect to mongodb
 mongoose
   .connect(mongoConnectionURL, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    dbName: databaseName,
   })
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.log(`Error connecting to MongoDB: ${err}`));

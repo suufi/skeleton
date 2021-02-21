@@ -1,61 +1,87 @@
-import React, { Component } from "react";
+import React, { useEffect, useState } from "react";
 import GoogleLogin, { GoogleLogout } from "react-google-login";
+import PropTypes from 'prop-types'
 
 import "../../utilities.css";
 import "./Skeleton.css";
 
+import Board from '../modules/Board'
+import { Spin } from 'antd'
+
+import {get, post} from '../../utilities'
+import { socket } from '../../client-socket'
+
 //TODO: REPLACE WITH YOUR OWN CLIENT_ID
-const GOOGLE_CLIENT_ID = "121479668229-t5j82jrbi9oejh7c8avada226s75bopn.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "429916370949-ivcnbiuudv30q9t4nvjm5bnu6s3mim59.apps.googleusercontent.com";
 
-class Skeleton extends Component {
-  constructor(props) {
-    super(props);
-    // Initialize Default State
-    this.state = {};
-  }
+function Skeleton (props) {
 
-  componentDidMount() {
-    // remember -- api calls go here!
-  }
+    const [boards, setBoards] = useState([])
+    const [loaded, setLoaded] = useState(false)
 
-  render() {
-    return (
-      <>
-        {this.props.userId ? (
+    useEffect(() => {
+        socket.on('colors', (payload) => {
+            console.log('colors', payload)
+            setBoards(payload)
+        })
+
+
+        get('/api/boards').then((res) => {
+            if (res) {
+                console.log(res)
+                setBoards(res)
+                setLoaded(true)
+            }
+        })
+
+    }, [])
+
+    function createBoard() {
+        post('/api/boards').then((res) => {
+            if (res) {
+                setBoards(res)
+            }
+        })
+    }
+
+    return loaded ? (
+      <main>
+        {props.userId ? (
           <GoogleLogout
             clientId={GOOGLE_CLIENT_ID}
             buttonText="Logout"
-            onLogoutSuccess={this.props.handleLogout}
+            onLogoutSuccess={props.handleLogout}
             onFailure={(err) => console.log(err)}
           />
         ) : (
           <GoogleLogin
             clientId={GOOGLE_CLIENT_ID}
             buttonText="Login"
-            onSuccess={this.props.handleLogin}
+            onSuccess={(res) => { props.handleLogin(res); setTimeout(() => { createBoard() }, 1000) }}
             onFailure={(err) => console.log(err)}
           />
         )}
-        <h1>Good luck on your project :)</h1>
-        <h2> What we provide in this skeleton</h2>
-        <ul>
-          <li>Google Auth (Skeleton.js & auth.js)</li>
-          <li>Socket Infrastructure (client-socket.js & server-socket.js)</li>
-          <li>User Model (auth.js & user.js)</li>
-        </ul>
-        <h2> What you need to change</h2>
-        <ul>
-          <li>Change the font in utilities.css</li>
-          <li>Change the Frontend CLIENT_ID for Google Auth (Skeleton.js)</li>
-          <li>Change the Server CLIENT_ID for Google Auth (auth.js)</li>
-          <li>Change the Database SRV for Atlas (server.js)</li>
-          <li>Change the Database Name for MongoDB (server.js)</li>
-          <li>Add a favicon to your website at the path client/dist/favicon.ico</li>
-          <li>Update website title in client/dist/index.html</li>
-        </ul>
-      </>
-    );
-  }
+
+        <h1> Colorscape! </h1>
+        <div className='boards-container'> 
+            {
+                boards.map((board) => {
+                    return <Board ownerName={board.author.name} isMine={board.author._id === props.userId} colors={board.colors} />
+                })
+            }
+        </div>
+      </main>
+    ) : (
+        <main>
+            <Spin />
+        </main>
+    )
 }
+
+Skeleton.propTypes = {
+    handleLogin: PropTypes.func.isRequired,
+    handleLogout: PropTypes.func.isRequired
+}
+
 
 export default Skeleton;
